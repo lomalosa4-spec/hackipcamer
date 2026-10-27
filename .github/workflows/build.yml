@@ -1,0 +1,43 @@
+name: Build Nesca for Windows
+
+on:
+  push:
+    branches: [ master, main ]
+  pull_request:
+    branches: [ master, main ]
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Install Qt
+      uses: jurplel/install-qt-action@v4
+      with:
+        version: '5.15.2'
+        arch: 'win64_mingw81'
+        cache: true
+
+    - name: Configure build
+      run: qmake nesca.pro
+
+    - name: Build project
+      run: mingw32-make -j4
+
+    - name: Prepare portable folder
+      shell: cmd
+      run: |
+        mkdir nesca-portable
+        copy release\nesca.exe nesca-portable\
+        windeployqt --compiler-runtime --release nesca-portable\nesca.exe
+        xcopy src\3rdparty\*.dll nesca-portable\ /y
+        xcopy src\pwd_lists\* nesca-portable\pwd_lists\ /s /i /y
+
+    - name: Upload Windows build
+      uses: actions/upload-artifact@v4
+      with:
+        name: nesca-windows-x64
+        path: nesca-portable/
